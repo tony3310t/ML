@@ -1,0 +1,12 @@
+MockClass4
+SkipTest
+_is_deprecated
+test_is_deprecated
+MockClass2
+mock_function
+deprecated
+test_deprecated
+MockClass1
+assert_warns_message
+MockClass3
+sys
