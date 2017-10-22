@@ -1,6 +1,6 @@
 import pymysql
 
-#宣告共用Constant
+#宣告共用Constant-------------
 _host="fintech.myds.me"
 _port=3307
 _user="wordpress_user"
