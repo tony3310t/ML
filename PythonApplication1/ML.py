@@ -1,9 +1,10 @@
+import os
+import SQLAcess as sqlAccess
+import jieba
+import csv
 import numpy as np
 import pickle
-import csv
-import SQLAcess as sqlAccess
 import Common as common
-import os
 import json
 import datetime
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ import re
 import random
 from sklearn.svm import SVR
 from sklearn.svm import SVC
-import jieba
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
@@ -77,24 +78,73 @@ if os.path.exists(appDataPath + '\StockData') == False:
 
 compList = sqlAccess.GetData("select distinct stockname from googlenews")
 
-#count=0
+#strCsv = 'Stock,Train,Test,AVG,TotalNews\n'
+#countTrain = 0
+#countTest = 0
+#countAVG = 0
+#count = 0
 #for i in range(len(compList)):
 #	try:
-#		f = open(compList[i].get('stockname') + '_1.txt', 'r', encoding = 'UTF-8')
-#		result = f.read()
-#		a,b = result.split(':')
-#		f.close()
+#		tmpA = ''
+#		tmpB = ''
+#		for file in os.listdir(compList[i].get('stockname')):
+#			if file.endswith(".png"):
+#				try:
+#					index = str(file).index('_15_SVR_test')
+#					tmpA = str(file)[:index]
+#					print(tmpA)
+#				except:
+#					print()
+#			if file.endswith(".pickle"):
+#				try:
+#					index = str(file).index('_15_SVR')
+#					tmpB = str(file)[:index]
+#					print(tmpB)
+#				except:
+#					print() 
 
-#		f2 = open(compList[i].get('stockname') + '.txt', 'r', encoding = 'UTF-8')
-#		result2 = f2.read()
-#		c,d = result2.split(':')
-#		f2.close()
+#		if tmpA == '' or tmpB == '':
+#			continue
 
-#		if float(b) - float(d) > 0:
-#			print(compList[i].get('stockname'))
-#			count = count +1
+#		newsList = sqlAccess.GetData("select * from googlenews where stockname='"+compList[i].get('stockname')+"' and newsDate < '2017/08/01'")
+#		intA = int(round(int(tmpA[:2])))
+#		intB = int(round(int(float(tmpB)*100)))
+#		AVG = (intA + intB)/2
+#		strCsv = strCsv + compList[i].get('stockname') + ','
+#		strCsv = strCsv + str(intB) + ','
+#		strCsv = strCsv + str(intA) + ','
+#		strCsv = strCsv + str(AVG) + ','
+#		strCsv = strCsv + str(len(newsList)) + '\n'
+#		countTrain = countTrain + intB
+#		countTest = countTest + intA
+#		countAVG = countAVG + int(AVG)
+#		count = count+1
+
+		
+
+#		#f = open(compList[i].get('stockname') + '\\' + '_1.txt', 'r', encoding = 'UTF-8')
+#		#result = f.read()
+#		#a,b = result.split(':')
+#		#f.close()
+
+#		#f2 = open(compList[i].get('stockname') + '.txt', 'r', encoding = 'UTF-8')
+#		#result2 = f2.read()
+#		#c,d = result2.split(':')
+#		#f2.close()
+
+#		#if float(b) - float(d) > 0:
+#		#	print(compList[i].get('stockname'))
+#		#	count = count +1
 #	except:
 #		print()
+#strCsv = strCsv + 'AVG,'
+#strCsv = strCsv + str(int(countTrain/count)) + ','
+#strCsv = strCsv + str(int(countTest/count)) + ','
+#strCsv = strCsv + str(int(countAVG/count))
+
+#f = open('TotalList.csv', 'w', encoding = 'UTF-8')
+#f.write(strCsv)
+#f.close()
 
 #print(float(count) / float(len(len(compList))))
 
