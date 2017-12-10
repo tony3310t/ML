@@ -10,10 +10,13 @@ import datetime
 import matplotlib.pyplot as plt
 from  random import randint
 
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation
+from keras.optimizers import SGD
 
 #newsList = sqlAccess.GetData("select * from googlenews")
 #common.GetFrequency(newsList)
-
 import re
 import random
 from sklearn.svm import SVR
@@ -33,7 +36,7 @@ with open('stopword.txt') as f:
 stpwrdpath = "dict.txt"
 stpwrd_dic = open(stpwrdpath, 'r', encoding='UTF-8')
 stpwrd_content = stpwrd_dic.read()
-#将停用词表转换为list  
+#将停用词表转换为list
 stpwrdlst = stpwrd_content.splitlines()
 stpwrd_dic.close()
 
@@ -78,73 +81,84 @@ if os.path.exists(appDataPath + '\StockData') == False:
 
 compList = sqlAccess.GetData("select distinct stockname from googlenews")
 
-#strCsv = 'Stock,Train,Test,AVG,TotalNews\n'
-#countTrain = 0
-#countTest = 0
-#countAVG = 0
-#count = 0
-#for i in range(len(compList)):
-#	try:
-#		tmpA = ''
-#		tmpB = ''
-#		for file in os.listdir(compList[i].get('stockname')):
-#			if file.endswith(".png"):
-#				try:
-#					index = str(file).index('_15_SVR_test')
-#					tmpA = str(file)[:index]
-#					print(tmpA)
-#				except:
-#					print()
-#			if file.endswith(".pickle"):
-#				try:
-#					index = str(file).index('_15_SVR')
-#					tmpB = str(file)[:index]
-#					print(tmpB)
-#				except:
-#					print() 
+strCsv = 'Stock,Train,Test,AVG,TotalNews\n'
+countTrain = 0
+countTest = 0
+countAVG = 0
+count = 0
+for i in range(len(compList)):
+	try:
+		tmpA = ''
+		tmpB = ''
+		for file in os.listdir(compList[i].get('stockname')):
+			if file.endswith(".png"):
+				try:
+					index = str(file).index('_15_1210_Single_SVR_test')
+					tmpA = str(file)[:index]
+					print(tmpA)
+				except:
+					print()
+			if file.endswith(".pickle"):
+				try:
+					if tmpB == '':
+						index = str(file).index('_15_Single_SVR')
+						tmpB = str(file)[:index]
+						print(tmpB)
+				except:
+					print() 
+			#if file.endswith(".pickle"):
+			#	try:
+			#		index = str(file).index('_15_Acc_SVR')
+			#		tmpA = str(file)[:index]
+			#		print(tmpB)
+			#	except:
+			#		print() 
 
-#		if tmpA == '' or tmpB == '':
-#			continue
 
-#		newsList = sqlAccess.GetData("select * from googlenews where stockname='"+compList[i].get('stockname')+"' and newsDate < '2017/08/01'")
-#		intA = int(round(int(tmpA[:2])))
-#		intB = int(round(int(float(tmpB)*100)))
-#		AVG = (intA + intB)/2
-#		strCsv = strCsv + compList[i].get('stockname') + ','
-#		strCsv = strCsv + str(intB) + ','
-#		strCsv = strCsv + str(intA) + ','
-#		strCsv = strCsv + str(AVG) + ','
-#		strCsv = strCsv + str(len(newsList)) + '\n'
-#		countTrain = countTrain + intB
-#		countTest = countTest + intA
-#		countAVG = countAVG + int(AVG)
-#		count = count+1
+		if tmpA == '' or tmpB == '':
+			continue
+
+		newsList = sqlAccess.GetData("select * from googlenews where stockname='" + compList[i].get('stockname') + "' and newsDate < '2017/08/01'")
+		#intA = int(round(int(tmpA[:2])))
+		intA = int(round(int(float(tmpA))))
+		intB = int(round(int(float(tmpB) * 100)))
+		AVG = (intA + intB) / 2
+		strCsv = strCsv + compList[i].get('stockname') + ','
+		strCsv = strCsv + str(intB) + ','
+		strCsv = strCsv + str(intA) + ','
+		strCsv = strCsv + str(AVG) + ','
+		strCsv = strCsv + str(len(newsList)) + '\n'
+		countTrain = countTrain + intB
+		countTest = countTest + intA
+		countAVG = countAVG + int(AVG)
+		count = count + 1
 
 		
 
-#		#f = open(compList[i].get('stockname') + '\\' + '_1.txt', 'r', encoding = 'UTF-8')
-#		#result = f.read()
-#		#a,b = result.split(':')
-#		#f.close()
+		#f = open(compList[i].get('stockname') + '\\' + '_1.txt', 'r', encoding =
+		#'UTF-8')
+		#result = f.read()
+		#a,b = result.split(':')
+		#f.close()
 
-#		#f2 = open(compList[i].get('stockname') + '.txt', 'r', encoding = 'UTF-8')
-#		#result2 = f2.read()
-#		#c,d = result2.split(':')
-#		#f2.close()
+		#f2 = open(compList[i].get('stockname') + '.txt', 'r', encoding = 'UTF-8')
+		#result2 = f2.read()
+		#c,d = result2.split(':')
+		#f2.close()
 
-#		#if float(b) - float(d) > 0:
-#		#	print(compList[i].get('stockname'))
-#		#	count = count +1
-#	except:
-#		print()
-#strCsv = strCsv + 'AVG,'
-#strCsv = strCsv + str(int(countTrain/count)) + ','
-#strCsv = strCsv + str(int(countTest/count)) + ','
-#strCsv = strCsv + str(int(countAVG/count))
+		#if float(b) - float(d) > 0:
+		#	print(compList[i].get('stockname'))
+		#	count = count +1
+	except:
+		print()
+strCsv = strCsv + 'AVG,'
+strCsv = strCsv + str(int(countTrain / count)) + ','
+strCsv = strCsv + str(int(countTest / count)) + ','
+strCsv = strCsv + str(int(countAVG / count))
 
-#f = open('TotalList.csv', 'w', encoding = 'UTF-8')
-#f.write(strCsv)
-#f.close()
+f = open('TotalList_1210_Single_DNN.csv', 'w', encoding = 'UTF-8')
+f.write(strCsv)
+f.close()
 
 #print(float(count) / float(len(len(compList))))
 
@@ -154,7 +168,8 @@ compList = sqlAccess.GetData("select distinct stockname from googlenews")
 #	if os.path.exists(compList[compIndex].get('stockname')) == False:
 #		os.makedirs(compList[compIndex].get('stockname'))
 
-#	f = open(compList[compIndex].get('stockname') + "_1.txt",'r', encoding = 'utf8')
+#	f = open(compList[compIndex].get('stockname') + "_1.txt",'r', encoding =
+#	'utf8')
 #	data = f.read()
 #	f.close()
 #	results = data.split(',')
@@ -180,7 +195,7 @@ compList = sqlAccess.GetData("select distinct stockname from googlenews")
 #				listB[randNo] = 0
 
 #		X = []
-#		for i in range(100): 
+#		for i in range(100):
 #			tmp=[]
 #			tmp.append(i)
 #			X.append(tmp)
@@ -190,20 +205,38 @@ compList = sqlAccess.GetData("select distinct stockname from googlenews")
 #		plt.scatter(X, listB, c='g', label='Match')
 #		plt.xlabel('Data')
 #		plt.ylabel('Label')
-#		plt.title(category + ' days of ' + compList[compIndex].get('stockname') + ', rate = ' + str(rate) + '%')
+#		plt.title(category + ' days of ' + compList[compIndex].get('stockname') + ',
+#		rate = ' + str(rate) + '%')
 #		plt.legend()
 #		#plt.show()
-#		fig.savefig(compList[compIndex].get('stockname') + '\\' + category + ',' + str(rate) +'.png')
-
+#		fig.savefig(compList[compIndex].get('stockname') + '\\' + category + ',' +
+#		str(rate) +'.png')
+#segList = [
+#    '今 天 天 氣 很 好',
+#    '我很開 心'
+#]
+#vectorizer = TfidfVectorizer(stop_words = None,
+#token_pattern='(?u)\\b\\w\\w*\\b')
+##tf = TfidfVectorizer(stop_words = None, token_pattern='(?u)\\b\\w\\w*\\b')​
+#tfidf_matrix = vectorizer.fit_transform(segList)
+#feature_names = vectorizer.get_feature_names()
+#print(feature_names)
+#weight = tfidf_matrix.toarray()
+#vectorizer=CountVectorizer()
+#tfidftransformer=TfidfTransformer()
+#tfidf = tfidftransformer.fit_transform(vectorizer.fit_transform(segList)) #
+#先转换成词频矩阵，再计算TFIDF值
+#weight = tfidf.toarray()
 strMsg = ''
 rateDict = {}	
 for compIndex in range(len(compList)):
 	try:
-		#if os.path.exists(compList[compIndex].get('stockname') + "_SVC_Train.txt") == True:
+		#if os.path.exists(compList[compIndex].get('stockname') + "_SVC_Train.txt")
+		#== True:
 		#	continue
 		print(str(compIndex))
 		strMsg = ''
-		left = compList[compIndex].get('stockname').find('(')+1
+		left = compList[compIndex].get('stockname').find('(') + 1
 		right = compList[compIndex].get('stockname').find(')')
 		compNo = compList[compIndex].get('stockname')[left:right]
 		#common.GetBasicInfo(compNo)
@@ -215,7 +248,7 @@ for compIndex in range(len(compList)):
 		if len(data) == 0:
 			continue
 
-		newsList = sqlAccess.GetData("select * from googlenews where stockname='"+compList[compIndex].get('stockname')+"' and newsDate < '2017/08/01'")
+		newsList = sqlAccess.GetData("select * from googlenews where stockname='" + compList[compIndex].get('stockname') + "' and newsDate < '2017/08/01'")
 		segList = []
 		#instanceList = []
 		target15List = []
@@ -235,18 +268,24 @@ for compIndex in range(len(compList)):
 		if instanceCount > 1000:
 			instanceCount = 1000
 
-		testDataIndexStart = instanceCount*0.8
+		testDataIndexStart = instanceCount * 0.8
 		testDataIndexStart = int(testDataIndexStart)
-		trainDataEndIndex = instanceCount*0.8
+		trainDataEndIndex = instanceCount * 0.8
 		trainDataEndIndex = int(trainDataEndIndex)
-		if trainDataEndIndex%10 !=0:
-			trainDataEndIndex = trainDataEndIndex-(trainDataEndIndex%10)
+		if trainDataEndIndex % 10 != 0:
+			trainDataEndIndex = trainDataEndIndex - (trainDataEndIndex % 10)
 
 		for i in range(instanceCount):
 			content = newsList[i].get('newscontent')
 			seg = striphtml(content)
 			seg = segmentWord(seg)	
 			seg = removeStopword(seg)
+			singleWordList = list(seg)
+			seg = ''
+			for index in range(len(singleWordList)):
+				if singleWordList[index].strip() == '':					
+					continue
+				seg = seg + singleWordList[index] + ' '
 			segList.append(seg)
 
 			try:
@@ -268,15 +307,35 @@ for compIndex in range(len(compList)):
 					except:
 						Date = Date + datetime.timedelta(days=1)
 
-				Date = newsList[i].get('newsDate') + datetime.timedelta(days=15)
-				for index in range(10):
-					try:					
-						endDate15Dict = next((item for item in data if item.get("Date") == datetime.datetime.strftime(Date, '%Y/%m/%d')))
+				startPrice = float(startDateDict.get('Close'))
+				newStartPrice = startPrice
+				targetPrice = startPrice * 0.9
+				endPrice = float(0)
+				Date = newsList[i].get('newsDate') + datetime.timedelta(days=1)
+				countDay = 0
+				for move in range(30):						
+					for index in range(10):
+						try:					
+							endDate15Dict = next((item for item in data if item.get("Date") == datetime.datetime.strftime(Date, '%Y/%m/%d')))
+							endPrice = float(endDate15Dict.get('Close'))
+							Date = datetime.datetime.strptime(endDate15Dict.get('Date'), '%Y/%m/%d') + datetime.timedelta(days=1)
+							countDay = countDay + 1
+							break
+						except:
+							Date = Date + datetime.timedelta(days=1)
+					if endPrice <= targetPrice:
 						break
-					except:
-						Date = Date + datetime.timedelta(days=1)
+
+					if endPrice > newStartPrice:
+						targetPrice = endPrice * 0.9
+						newStartPrice = endPrice
+
+					if countDay >= 15:
+						break
 				strMsg = '3'
-				diff = float(endDate15Dict.get('Close')) - float(startDateDict.get('Close'))
+				#diff = float(endDate15Dict.get('Close')) -
+				#float(startDateDict.get('Close'))
+				diff = endPrice - float(startDateDict.get('Close'))
 			
 				if diff >= 0:
 					target15List[i] = 1
@@ -315,14 +374,20 @@ for compIndex in range(len(compList)):
 				strMsg = '4'
 				#instanceList.append(list(featureDict.values()))
 			except:
-				a=0
-						
-		vectorizer=CountVectorizer()
-		tfidftransformer=TfidfTransformer()
-		tfidf = tfidftransformer.fit_transform(vectorizer.fit_transform(segList))  # 先转换成词频矩阵，再计算TFIDF值
+				a = 0
+			
+		vectorizer = TfidfVectorizer(stop_words = None, token_pattern='(?u)\\b\\w\\w*\\b')
+		tfidf = vectorizer.fit_transform(segList)
+		#feature_names = vectorizer.get_feature_names()
+		#print(feature_names)
+		#weight = tfidf_matrix.toarray()
+		#vectorizer=CountVectorizer()
+		#tfidftransformer=TfidfTransformer()
+		#tfidf = tfidftransformer.fit_transform(vectorizer.fit_transform(segList)) #
+		#先转换成词频矩阵，再计算TFIDF值
 		weight = tfidf.toarray()
 		print(tfidf.shape)
-		print("len of weight:" + str(len(weight)) + "," + "len of target15:" + str(len(target15List))+ "," + "len of target10:" + str(len(target10List))+ "," + "len of target5:" + str(len(target5List)))
+		print("len of weight:" + str(len(weight)) + "," + "len of target15:" + str(len(target15List)) + "," + "len of target10:" + str(len(target10List)) + "," + "len of target5:" + str(len(target5List)))
 		target15List = np.array(target15List)
 		target10List = np.array(target10List)
 		target5List = np.array(target5List)
@@ -334,13 +399,13 @@ for compIndex in range(len(compList)):
 		for i in range(10):
 			period = trainDataEndIndex / 10
 			period = int(period)
-			splitData = weight[i*period:(i+1)*period]
+			splitData = weight[i * period:(i + 1) * period]
 			splitWeightList.append(splitData)
-			splitTarget = target15List[i*period:(i+1)*period]
+			splitTarget = target15List[i * period:(i + 1) * period]
 			splitTarget15List.append(splitTarget)
-			splitTarget = target10List[i*period:(i+1)*period]
+			splitTarget = target10List[i * period:(i + 1) * period]
 			splitTarget10List.append(splitTarget)
-			splitTarget = target5List[i*period:(i+1)*period]
+			splitTarget = target5List[i * period:(i + 1) * period]
 			splitTarget5List.append(splitTarget)
 
 		finalModel15 = trainSVR(splitWeightList[0], splitTarget15List[0])
@@ -387,7 +452,7 @@ for compIndex in range(len(compList)):
 				if result[index] == validLabel15[index]:
 					count = count + 1
 
-			rate = float(count)/float(len(validLabel15))
+			rate = float(count) / float(len(validLabel15))
 			if rate > tmpRate15:
 				finalModel15 = model15
 				tmpRate15 = rate
@@ -403,7 +468,7 @@ for compIndex in range(len(compList)):
 				if result[index] == validLabel10[index]:
 					count = count + 1
 
-			rate = float(count)/float(len(validLabel10))
+			rate = float(count) / float(len(validLabel10))
 			if rate > tmpRate10:
 				finalModel10 = model10
 				tmpRate10 = rate
@@ -419,18 +484,18 @@ for compIndex in range(len(compList)):
 				if result[index] == validLabel5[index]:
 					count = count + 1
 
-			rate = float(count)/float(len(validLabel5))
+			rate = float(count) / float(len(validLabel5))
 			if rate > tmpRate5:
 				finalModel5 = model5
 				tmpRate5 = rate
 
-		with open(compList[compIndex].get('stockname') + '\\' + str(tmpRate15) + '_15_SVR.pickle', 'wb') as f:
+		with open(compList[compIndex].get('stockname') + '\\' + str(tmpRate15) + '_15_Single_SVR.pickle', 'wb') as f:
 			pickle.dump(finalModel15, f)
 
-		with open(compList[compIndex].get('stockname') + '\\' + str(tmpRate10) + '_10_SVR.pickle', 'wb') as f:
+		with open(compList[compIndex].get('stockname') + '\\' + str(tmpRate10) + '_10_Single_SVR.pickle', 'wb') as f:
 			pickle.dump(finalModel10, f)
 
-		with open(compList[compIndex].get('stockname') + '\\' + str(tmpRate5) + '_5_SVR.pickle', 'wb') as f:
+		with open(compList[compIndex].get('stockname') + '\\' + str(tmpRate5) + '_5_Single_SVR.pickle', 'wb') as f:
 			pickle.dump(finalModel5, f)
 
 		result = finalModel15.predict(weight[testDataIndexStart:])
@@ -439,12 +504,46 @@ for compIndex in range(len(compList)):
 
 		count = 0
 		for index in range(len(result)):
-			if result[index] == target15List[index+testDataIndexStart]:
+			if result[index] == target15List[index + testDataIndexStart]:
 				count = count + 1
 
-		rate = float(count)/float(len(result))
+		rate = float(count) / float(len(result))
+		#model = Sequential()
+		## Dense(64) is a fully-connected layer with 64 hidden units.
+		## in the first layer, you must specify the expected input data shape:
+		## here, 20-dimensional vectors.
+		#model.add(Dense(64, activation='relu', input_dim=int(tfidf.shape[1])))
+		#model.add(Dropout(0.5))
+		#model.add(Dense(64, activation='relu'))
+		#model.add(Dropout(0.5))
+		#model.add(Dense(1, activation='softmax'))
 
-		rate = rate*100
+		#sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+		#model.compile(loss='binary_crossentropy',
+		#			  optimizer=sgd,
+		#			  metrics=['accuracy'])
+
+		#hist = model.fit(weight[:int(len(weight)*0.8)],
+		#target15List[:int(len(target15List)*0.8)],
+		#		  epochs=200,
+		#		  batch_size=128)
+		#loss,acc = model.evaluate(weight[int(len(weight)*0.8):],
+		#target15List[int(len(target15List)*0.8):], batch_size=128)
+
+		
+
+		#with open(compList[compIndex].get('stockname') + '\\' +
+		#str(hist.history.get('acc')[199]) + '_15_Valid_SVR.pickle', 'wb') as f:
+		#	pickle.dump(finalModel5, f)
+
+		#with open(compList[compIndex].get('stockname') + '\\' + str(loss) +
+		#'_15_Loss_SVR.pickle', 'wb') as f:
+		#	pickle.dump(finalModel5, f)
+		#with open(compList[compIndex].get('stockname') + '\\' + str(acc) +
+		#'_15_Acc_SVR.pickle', 'wb') as f:
+		#	pickle.dump(finalModel5, f)
+
+		rate = rate * 100
 		category = '15'
 		listA = []
 		listB = []
@@ -453,7 +552,7 @@ for compIndex in range(len(compList)):
 			listA.append(randNo)
 			listB.append(randNo)
 
-		for i in range(100-int(rate)):
+		for i in range(100 - int(rate)):
 			randNo = randint(0, 99)
 
 			if listB[randNo] == 0:
@@ -463,7 +562,7 @@ for compIndex in range(len(compList)):
 
 		X = []
 		for i in range(100): 
-			tmp=[]
+			tmp = []
 			tmp.append(i)
 			X.append(tmp)
 		X = np.array(X)
@@ -475,19 +574,22 @@ for compIndex in range(len(compList)):
 		plt.title(category + ' days of ' + compList[compIndex].get('stockname') + ', rate = ' + str(rate) + '%')
 		plt.legend()
 		#plt.show()
-		fig.savefig(compList[compIndex].get('stockname') + '\\' + str(rate) + '_' + category + '_SVR_test' +'.png')
-
+		fig.savefig(compList[compIndex].get('stockname') + '\\' + str(rate) + '_' + category + '_1210_Single_SVR_test' + '.png')
+		print(compList[compIndex].get('stockname') + " Train:" + str(tmpRate15) + " Test:" + str(rate))
 		
 		#svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
 		#clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
   #                  hidden_layer_sizes=(5, 2), random_state=1)
-		#y_rbf15 = clf.fit(weight[:int(len(weight)*0.8)], target15List[:int(len(weight)*0.8)]).predict(weight[int(len(weight)*0.8):])
+		#y_rbf15 = clf.fit(weight[:int(len(weight)*0.8)],
+		#target15List[:int(len(weight)*0.8)]).predict(weight[int(len(weight)*0.8):])
 		#clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
   #                  hidden_layer_sizes=(5, 2), random_state=1)
-		#y_rbf10 = clf.fit(weight[:int(len(weight)*0.8)], target10List[:int(len(weight)*0.8)]).predict(weight[int(len(weight)*0.8):])
+		#y_rbf10 = clf.fit(weight[:int(len(weight)*0.8)],
+		#target10List[:int(len(weight)*0.8)]).predict(weight[int(len(weight)*0.8):])
 		#clf = MLPClassifier(solver='lbfgs', alpha=1e-5,
   #                  hidden_layer_sizes=(5, 2), random_state=1)
-		#y_rbf5 = clf.fit(weight[:int(len(weight)*0.8)], target5List[:int(len(weight)*0.8)]).predict(weight[int(len(weight)*0.8):])
+		#y_rbf5 = clf.fit(weight[:int(len(weight)*0.8)],
+		#target5List[:int(len(weight)*0.8)]).predict(weight[int(len(weight)*0.8):])
 		#strMsg = '5'
 		#for i in range(len(y_rbf15)):
 		#	y_rbf15[i] = int(round(y_rbf15[i]))
@@ -507,7 +609,7 @@ for compIndex in range(len(compList)):
 		#	if target15List[i+halfIndex] == y_rbf15[i]:
 		#		count = count +1
 
-		#rate15 = str(round(float(count)/float((len(target15List)*0.2)), 2))		
+		#rate15 = str(round(float(count)/float((len(target15List)*0.2)), 2))
 		#print(compList[compIndex].get('stockname') + " of 15:" + rate15)
 
 		#rate10 = ''
@@ -517,7 +619,7 @@ for compIndex in range(len(compList)):
 		#	if target10List[i+halfIndex] == y_rbf10[i]:
 		#		count = count +1
 
-		#rate10 = str(round(float(count)/float((len(target10List)*0.2)), 2))		
+		#rate10 = str(round(float(count)/float((len(target10List)*0.2)), 2))
 		#print(compList[compIndex].get('stockname') + " of 10:" + rate10)
 
 		#rate5 = ''
@@ -527,14 +629,19 @@ for compIndex in range(len(compList)):
 		#	if target5List[i+halfIndex] == y_rbf5[i]:
 		#		count = count +1
 
-		#rate5 = str(round(float(count)/float((len(target5List)*0.2)), 2))		
+		#rate5 = str(round(float(count)/float((len(target5List)*0.2)), 2))
 		#print(compList[compIndex].get('stockname') + " of 5:" + rate5)
 		
-		#file = open(compList[compIndex].get('stockname')+'_MLP.txt', 'w', encoding = 'UTF-8')    # 也可使用指定路徑等方式，如： C:\A.txt
-		#file.write(str(compList[compIndex].get('stockname') + "15:" + rate15 + "," + compList[compIndex].get('stockname') + "10:" + rate10 + "," + compList[compIndex].get('stockname') + "5:" + rate5))	
+		#file = open(compList[compIndex].get('stockname')+'_MLP.txt', 'w', encoding =
+		#'UTF-8') # 也可使用指定路徑等方式，如： C:\A.txt
+		#file.write(str(compList[compIndex].get('stockname') + "15:" + rate15 + "," +
+		#compList[compIndex].get('stockname') + "10:" + rate10 + "," +
+		#compList[compIndex].get('stockname') + "5:" + rate5))
 		#file.close()
 
-		#newsList = sqlAccess.GetData("select * from googlenews where stockname='"+compList[compIndex].get('stockname')+"' and newsDate < '2017/08/01'")
+		#newsList = sqlAccess.GetData("select * from googlenews where
+		#stockname='"+compList[compIndex].get('stockname')+"' and newsDate <
+		#'2017/08/01'")
 		#instanceList = []
 		#targetList = []
 		#i=0
@@ -554,20 +661,20 @@ for compIndex in range(len(compList)):
 		#	content = newsList[i].get('newscontent')
 
 		#	document_cut = jieba.cut(content)
-		#	#print  ' '.join(jieba_cut)
+		#	#print ' '.join(jieba_cut)
 		#	result = ' '.join(document_cut)
 		#	corpus = [result]
 		#	vector = TfidfVectorizer(stop_words=stpwrdlst)
 		#	tfidf = vector.fit_transform(corpus)
 		#	#print (tfidf)
 
-		#	wordlist = vector.get_feature_names()#获取词袋模型中的所有词  
+		#	wordlist = vector.get_feature_names()#获取词袋模型中的所有词
 		#	# tf-idf矩阵 元素a[i][j]表示j词在i类文本中的tf-idf权重
-		#	weightlist = tfidf.toarray()  
+		#	weightlist = tfidf.toarray()
 		#	#print(len(wordlist))
 	
 		#	#打印每类文本的tf-idf词语权重，第一个for遍历所有文本，第二个for便利某一类文本下的词语权重
-		#	for j in range(len(weightlist)):  
+		#	for j in range(len(weightlist)):
 		#		for k in range(len(wordlist)):
 		#			if wordlist[k] in keywordList:
 		#				featureDict[wordlist[k]] = float(weightlist[j][k])
@@ -580,16 +687,18 @@ for compIndex in range(len(compList)):
 		#		strMsg = '2'
 		#		Date = newsList[i].get('newsDate')
 		#		for index in range(10):
-		#			try:					
-		#				startDateDict = next((item for item in data if item.get("Date") == datetime.datetime.strftime(Date, '%Y/%m/%d')))
+		#			try:
+		#				startDateDict = next((item for item in data if item.get("Date") ==
+		#				datetime.datetime.strftime(Date, '%Y/%m/%d')))
 		#				break
 		#			except:
 		#				Date = Date + datetime.timedelta(days=1)
 
 		#		Date = newsList[i].get('newsDate') + datetime.timedelta(days=15)
 		#		for index in range(10):
-		#			try:					
-		#				endDateDict = next((item for item in data if item.get("Date") == datetime.datetime.strftime(Date, '%Y/%m/%d')))
+		#			try:
+		#				endDateDict = next((item for item in data if item.get("Date") ==
+		#				datetime.datetime.strftime(Date, '%Y/%m/%d')))
 		#				break
 		#			except:
 		#				Date = Date + datetime.timedelta(days=1)
@@ -611,13 +720,14 @@ for compIndex in range(len(compList)):
 		#instanceList = np.array(instanceList)
 		#targetList = np.array(targetList)
 		#svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
-		#y_rbf = svr_rbf.fit(instanceList[:int(len(instanceList)/2)], targetList[:int(len(instanceList)/2)]).predict(instanceList[int(len(instanceList)/2):])
+		#y_rbf = svr_rbf.fit(instanceList[:int(len(instanceList)/2)],
+		#targetList[:int(len(instanceList)/2)]).predict(instanceList[int(len(instanceList)/2):])
 		#strMsg = '5'
 		#for i in range(len(y_rbf)):
 		#	y_rbf[i] = int(round(y_rbf[i]))
 
 		#X = []
-		#for i in range(len(targetList)): 
+		#for i in range(len(targetList)):
 		#	tmp=[]
 		#	tmp.append(i)
 		#	X.append(tmp)
@@ -629,11 +739,14 @@ for compIndex in range(len(compList)):
 		#	if targetList[i+halfIndex] == y_rbf[i]:
 		#		count = count +1
 		
-		#print(compList[compIndex].get('stockname') + ":" + str(round(float(count)/float((len(targetList)/2)), 2)))
+		#print(compList[compIndex].get('stockname') + ":" +
+		#str(round(float(count)/float((len(targetList)/2)), 2)))
 		#strMsg = '7'
 
-		#file = open(compList[compIndex].get('stockname')+'_1.txt', 'w', encoding = 'UTF-8')    # 也可使用指定路徑等方式，如： C:\A.txt
-		#file.write(str(compList[compIndex].get('stockname') + ":" + str(round(float(count)/float((len(targetList)/2)), 2))))	
+		#file = open(compList[compIndex].get('stockname')+'_1.txt', 'w', encoding =
+		#'UTF-8') # 也可使用指定路徑等方式，如： C:\A.txt
+		#file.write(str(compList[compIndex].get('stockname') + ":" +
+		#str(round(float(count)/float((len(targetList)/2)), 2))))
 		#file.close()
 
 		
@@ -642,11 +755,12 @@ for compIndex in range(len(compList)):
 		##plt.plot(X, y_rbf, c='g', label='RBF model')
 		##plt.xlabel('data')
 		##plt.ylabel('target')
-		##plt.title('SVR of '+compList[compIndex].get('stockname')+', rate = ' + str( round(float(count)/float(len(targetList)), 2) ))
+		##plt.title('SVR of '+compList[compIndex].get('stockname')+', rate = ' + str(
+		##round(float(count)/float(len(targetList)), 2) ))
 		##plt.legend()
 		##plt.show()
 	except Exception as e:
-		print(compList[compIndex].get('stockname') + ":" + 'Failed to upload to ftp: '+ str(e) + ":" + strMsg)
+		print(compList[compIndex].get('stockname') + ":" + 'Failed to upload to ftp: ' + str(e) + ":" + strMsg)
 
 
 
