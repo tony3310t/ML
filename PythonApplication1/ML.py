@@ -27,6 +27,30 @@ with open('train.csv', 'w', newline='') as csvfile:
 		except:
 			print(realIdx)
 '''
+
+def correctRate(lstReal, lstPredict, stockNo):
+	count = 0;
+	for idx in range(1,len(lstReal)):
+		realUpOrDown = lstReal[idx] - lstReal[idx-1]
+		realBoolUp = True
+		if realUpOrDown >= 0:
+			realBoolUp = True
+		else:
+			realBoolUp = False
+
+		predictUpOrDown = lstPredict[idx] - lstPredict[idx-1]
+		predictBoolUp = True
+		if predictUpOrDown >= 0:
+			predictBoolUp = True
+		else:
+			predictBoolUp = False
+
+		if realBoolUp == predictBoolUp:
+			count = count +1
+
+	print(stockNo + ':' + str(float(count/len(lstReal))))
+
+
 # Import the libraries
 import numpy as np
 import matplotlib.pyplot as plt  # for 畫圖用
@@ -94,7 +118,7 @@ inputs = inputs.reshape(-1,1)
 inputs = sc.transform(inputs) # Feature Scaling
 
 X_test = []
-for i in range(60, 219):  # timesteps一樣60； 80 = 先前的60天資料+2017年的20天資料
+for i in range(60, 341):  # timesteps一樣60； 80 = 先前的60天資料+2017年的20天資料
     X_test.append(inputs[i-60:i, 0])
 X_test = np.array(X_test)
 X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))  # Reshape 成 3-dimension
@@ -103,13 +127,14 @@ predicted_stock_price = regressor.predict(X_test)
 predicted_stock_price = sc.inverse_transform(predicted_stock_price)  # to get the original scale
 
 # Visualising the results
-plt.plot(real_stock_price, color = 'red', label = 'Real Google Stock Price')  # 紅線表示真實股價
-plt.plot(predicted_stock_price, color = 'blue', label = 'Predicted Google Stock Price')  # 藍線表示預測股價
+plt.plot(real_stock_price, color = 'red', label = 'Real 1101 Stock Price')  # 紅線表示真實股價
+plt.plot(predicted_stock_price, color = 'blue', label = 'Predicted 1101 Stock Price')  # 藍線表示預測股價
 plt.title('1101 Prediction')
 plt.xlabel('Time')
 plt.ylabel('1101 Price')
 plt.legend()
 plt.show()
 
-regressor.save('1101_mi=odel.h5')   # HDF5 file, you have to pip3 install h5py if don't have it
-del model  # deletes the existing model
+#regressor.save('1101_mi=odel.h5')   # HDF5 file, you have to pip3 install h5py if don't have it
+#del model  # deletes the existing model
+
