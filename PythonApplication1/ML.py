@@ -1,185 +1,137 @@
-from MongoDB import *
-import csv
-
-def setCsv(stockNo):
-	data = GetStockInfoList(stockNo)
-	dataList = list(data)
-	# Date,Open,High,Low,Last,Close,Total Trade Quantity,Turnover (Lacs)
-	train_len = int(len(dataList) * 0.8)
-	test_len = len(dataList) - train_len
-
-	with open('train_' + stockNo + '.csv', 'w', newline='') as csvfile:
-		# 建立 CSV 檔寫入器
-		writer = csv.writer(csvfile)
-
-		# 寫入一列資料
-		writer.writerow(['Date', 'Open', 'High', 'Low', 'Close', 'Quantity', 'PERatio'])
-
-		# 寫入另外幾列資料
-		for idx in range(train_len):
-			realIdx = len(dataList) - idx - 1
-			try:
-				writer.writerow([dataList[realIdx].get('Date'),
-						round(float(dataList[realIdx].get('StockInfo').get('stockOpenList')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('stockHighList')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('stockLowList')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('stockCloseList')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('stockTranMountList').replace(',','')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('StockPERatio')),2)])
-			except:
-				print(str(realIdx) + '_train_csv_output_fail' + ':' + stockNo)
-
-	with open('test_' + stockNo + '.csv', 'w', newline='') as csvfile:
-		# 建立 CSV 檔寫入器
-		writer = csv.writer(csvfile)
-
-		# 寫入一列資料
-		writer.writerow(['Date', 'Open', 'High', 'Low', 'Close', 'Quantity', 'PERatio'])
-
-		# 寫入另外幾列資料
-		for idx in range(test_len):
-			realIdx = len(dataList) - train_len - idx - 1
-			try:
-				writer.writerow([dataList[realIdx].get('Date'),
-						round(float(dataList[realIdx].get('StockInfo').get('stockOpenList')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('stockHighList')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('stockLowList')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('stockCloseList')),2),
-						round(float(dataList[realIdx].get('StockInfo').get('stockTranMountList').replace(',','')),),
-						round(float(dataList[realIdx].get('StockInfo').get('StockPERatio')),2)])
-			except:
-				print(str(realIdx) + '_test_csv_output_fail' + ':' + stockNo)
-
-
-def correctRate(lstReal, lstPredict, stockNo):
-	count = 0
-	for idx in range(1,len(lstReal)):
-		realUpOrDown = lstReal[idx] - lstReal[idx - 1]
-		realBoolUp = True
-		if realUpOrDown >= 0:
-			realBoolUp = True
-		else:
-			realBoolUp = False
-
-		predictUpOrDown = lstPredict[idx] - lstReal[idx - 1]
-		predictBoolUp = True
-		if predictUpOrDown >= 0:
-			predictBoolUp = True
-		else:
-			predictBoolUp = False
-
-		if realBoolUp == predictBoolUp:
-			count = count + 1
-
-	print(stockNo + ':' + str(float(count / len(lstReal))))
-	return round(float(count / len(lstReal)),2)
-
-# Import the libraries
 import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
-import matplotlib.pyplot as plt  # for 畫圖用
-
-# Import the Keras libraries and packages
+from pandas import datetime
+import math, time
+import itertools
+from sklearn import preprocessing
+import datetime
+from sklearn.metrics import mean_squared_error
+from math import sqrt
 from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
-from keras.layers import Dropout
+from keras.layers.core import Dense, Dropout, Activation
+from keras.layers.recurrent import LSTM
+from keras.models import load_model
+import keras
+import pandas_datareader.data as web
+import h5py
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
-# Feature Scaling
-from sklearn.preprocessing import MinMaxScaler
+stock_name = '^GSPC'
+seq_len = 22
+d = 0.2
+shape = [4, seq_len, 1] # feature, window, output
+neurons = [128, 128, 32, 1]
+epochs = 300
 
-stockList = list(GetStockList())
+def get_stock_data(stock_name, normalize=True):
+    start = datetime.datetime(1980, 2, 10)
+    end = datetime.date.today()
+    df = web.DataReader(stock_name, "yahoo", start, end)
+    df.drop(['Volume', 'Close'], 1, inplace=True)
+    
+    if normalize:        
+        min_max_scaler = preprocessing.MinMaxScaler()
+        df['Open'] = min_max_scaler.fit_transform(df.Open.values.reshape(-1,1))
+        df['High'] = min_max_scaler.fit_transform(df.High.values.reshape(-1,1))
+        df['Low'] = min_max_scaler.fit_transform(df.Low.values.reshape(-1,1))
+        df['Adj Close'] = min_max_scaler.fit_transform(df['Adj Close'].values.reshape(-1,1))
+    return df
 
-for i in range(len(stockList)):
-	try:
-		nowStockNo = stockList[i].get('No')
-		setCsv(nowStockNo)
-		# Import the training set
-		dataset_train = pd.read_csv('train_' + nowStockNo + '.csv')  # 讀取訓練集
-		training_set = dataset_train.iloc[:, 4:5].values  # 取「Open」欄位值
+df = get_stock_data(stock_name, normalize=True)
 
-		sc = MinMaxScaler(feature_range = (0, 1))
-		training_set_scaled = sc.fit_transform(training_set)
+def load_data(stock, seq_len):
+    amount_of_features = len(stock.columns)
+    data = stock.as_matrix() 
+    sequence_length = seq_len + 1 # index starting from 0
+    result = []
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+    for index in range(len(data) - sequence_length): # maxmimum date = lastest date - sequence length
+        result.append(data[index: index + sequence_length]) # index : index + 22days
+    
+    result = np.array(result)
+    row = round(0.9 * result.shape[0]) # 90% split
+    
+    train = result[:int(row), :] # 90% date
+    X_train = train[:, :-1] # all data until day m
+    y_train = train[:, -1][:,-1] # day m + 1 adjusted close price
+    
+    X_test = result[int(row):, :-1]
+    y_test = result[int(row):, -1][:,-1] 
 
-		X_train = []   #預測點的前 60 天的資料
-		y_train = []   #預測點
-		for i in range(60, len(training_set)):  # 1258 是訓練集總數
-			X_train.append(training_set_scaled[i - 60:i, 0])
-			y_train.append(training_set_scaled[i, 0])
-		X_train, y_train = np.array(X_train), np.array(y_train)  # 轉成numpy array的格式，以利輸入 RNN
-		X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+    X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], amount_of_features))
+    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], amount_of_features))  
 
-		# Initialising the RNN
-		regressor = Sequential()
+    return [X_train, y_train, X_test, y_test]
 
-		# Adding the first LSTM layer and some Dropout regularisation
-		regressor.add(LSTM(units = 50, return_sequences = True, input_shape = (X_train.shape[1], 1)))
-		regressor.add(Dropout(0.2))
+X_train, y_train, X_test, y_test = load_data(df, seq_len)
 
-		# Adding a second LSTM layer and some Dropout regularisation
-		regressor.add(LSTM(units = 50, return_sequences = True))
-		regressor.add(Dropout(0.2))
+def build_model2(layers, neurons, d):
+    model = Sequential()
+    
+    model.add(LSTM(neurons[0], input_shape=(layers[1], layers[0]), return_sequences=True))
+    model.add(Dropout(d))
+        
+    model.add(LSTM(neurons[1], input_shape=(layers[1], layers[2]), return_sequences=False))
+    model.add(Dropout(d))
+        
+    model.add(Dense(neurons[2],kernel_initializer="uniform",activation='relu'))        
+    model.add(Dense(neurons[3],kernel_initializer="uniform",activation='linear'))
+    # model = load_model('my_LSTM_stock_model1000.h5')
+    adam = keras.optimizers.Adam(decay=0.2)
+    model.compile(loss='mse',optimizer='adam', metrics=['accuracy'])
+    model.summary()
+    return model
 
-		# Adding a third LSTM layer and some Dropout regularisation
-		regressor.add(LSTM(units = 50, return_sequences = True))
-		regressor.add(Dropout(0.2))
+model = build_model2(shape, neurons, d)
 
-		# Adding a fourth LSTM layer and some Dropout regularisation
-		regressor.add(LSTM(units = 50))
-		regressor.add(Dropout(0.2))
+history=model.fit(
+    X_train,
+    y_train,
+    batch_size=512,
+    epochs=epochs,
+    validation_split=0.1,
+    verbose=1)
 
-		# Adding the output layer
-		regressor.add(Dense(units = 1))
+def model_score(model, X_train, y_train, X_test, y_test):
+#其實這裡只需要傳入X_test和y_test即可，只是為了和上面格式保持一致因而也將X_train和y_train傳入了    
+    y_hat = model.predict(X_test)
+    y_t=y_test.reshape(-1,1)
+    
+    temp = pd.DataFrame(y_hat)  
+    temp['yhat']=y_hat
+    temp['y']=y_t
+    temp_rmse = sqrt(mean_squared_error(temp.y,temp.yhat))
+    temp_mse=mean_squared_error(temp.y,temp.yhat)
+    print('TEMP RMSE: %.3f' % temp_rmse)
+    print('TEMP MSE: %.3f' % temp_mse)
+    return y_hat
 
-		# Compiling
-		regressor.compile(optimizer = 'adam', loss = 'mean_squared_error')
+y_p = model_score(model, X_train, y_train, X_test, y_test)
 
-		# 進行訓練
-		regressor.fit(X_train, y_train, epochs = 100, batch_size = 32)
+def denormalize(stock_name, normalized_value):
+    start = datetime.datetime(2000, 1, 1)
+    end = datetime.date.today()
+    df = web.DataReader(stock_name, "yahoo", start, end)
+    
+    df = df['Adj Close'].values.reshape(-1,1)
+    normalized_value = normalized_value.reshape(-1,1)
+    
+    #return df.shape, p.shape
+    min_max_scaler = preprocessing.MinMaxScaler()
+    a = min_max_scaler.fit_transform(df)
+    new = min_max_scaler.inverse_transform(normalized_value)
+    return new
 
-		dataset_test = pd.read_csv('test_' + nowStockNo + '.csv')
-		real_stock_price = dataset_test.iloc[:, 4:5].values
+def plot_result(stock_name, normalized_value_p, normalized_value_y_test):
+    newp = denormalize(stock_name, normalized_value_p)
+    newy_test = denormalize(stock_name, normalized_value_y_test)
+    plt.plot(newp, color='red', label='Prediction')
+    plt.plot(newy_test,color='blue', label='Actual')
+    plt.legend(loc='best')
+    plt.title('The test result for {}'.format(stock_name))
+    plt.xlabel('Days')
+    plt.ylabel('Adjusted Close')
+    plt.show()
 
-		dataset_total = pd.concat((dataset_train['Close'], dataset_test['Close']), axis = 0)
-		inputs = dataset_total[len(dataset_total) - len(dataset_test) - 60:].values
-		inputs = inputs.reshape(-1,1)
-		inputs = sc.transform(inputs) # Feature Scaling
-		X_test = []
-		for i in range(60, len(real_stock_price) + 60):  # timesteps一樣60； 80 = 先前的60天資料+2017年的20天資料
-			X_test.append(inputs[i - 60:i, 0])
-		X_test = np.array(X_test)
-		X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))  # Reshape 成 3-dimension
-		predicted_stock_price = regressor.predict(X_test)
-		predicted_stock_price = sc.inverse_transform(predicted_stock_price)  # to get the original scale
-
-		# Visualising the results
-		fig = plt.figure()
-		plt.plot(real_stock_price, color = 'red', label = 'Real ' + nowStockNo + ' Stock Price')  # 紅線表示真實股價
-		plt.plot(predicted_stock_price, color = 'blue', label = 'Predicted ' + nowStockNo + ' Stock Price')  # 藍線表示預測股價
-		plt.title(nowStockNo + ' Prediction')
-		plt.xlabel('Time')
-		plt.ylabel(nowStockNo + ' Price')
-		plt.legend()
-		plt.savefig(nowStockNo + '_close_only_prediction.png')
-		plt.close('all') # 关闭图 0
-
-		rate = correctRate(list(real_stock_price), list(predicted_stock_price),nowStockNo)
-
-		stockPredictResultList = []
-		stockPredictResult = {}
-		stockPredictResult['StockNo'] = nowStockNo
-		stockPredictResult['Type'] = 'Close_Only_Predict'
-		#stockPredictResult['RealPrice'] = list(real_stock_price)
-		#stockPredictResult['PredictPrice'] = list(predicted_stock_price)
-		stockPredictResult['CorrectRate'] = rate
-		stockPredictResultList.append(stockPredictResult)
-
-		InsertStockPredictResult(stockPredictResultList)
-		#plt.show()
-
-		#regressor.save('1101_mi=odel.h5') # HDF5 file, you have to pip3 install h5py
-		#if don't have it
-		#del model # deletes the existing model
-	except:
-		print(str(i) + '_error')
-
+plot_result(stock_name, y_p, y_test)
