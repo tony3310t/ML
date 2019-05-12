@@ -1,8 +1,26 @@
+'''
+from MongoDB import *
+import pandas as pd
+import pandas_datareader.data as web
+import os
+import datetime
+
+stockList = list(GetStockList())
+for i in range(len(stockList)):
+	stock_name = stockList[i].get('No') + '.TW'
+	start = datetime.datetime(1990, 1, 1)
+	end = datetime.date.today()
+	df = web.DataReader(stock_name, "yahoo", start, end)
+	cwd = os.getcwd()
+	cwd = cwd + '\\dataframe\\' + stock_name
+	df.to_pickle(cwd)
+'''
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pandas import datetime
-import math, time
+import math
+import time
 import itertools
 from sklearn import preprocessing
 import datetime
@@ -18,11 +36,22 @@ import h5py
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 import os
 from MongoDB import *
+from keras.callbacks import EarlyStopping
+
+dataframeFolderName = 'dataframe'
+diagramFolderName = 'lstm_train_diagram_season'
+diagramPictureName = '_LSTM_prediction_season_diagram'
+modelFolderName = 'lstm_train_model_season'
+modelFileName = '_LSTM_prediction_season'
+correctRateType = '5_features_lstm_predict_season'
 
 def get_stock_data(stock_name, normalize=True):
 	start = datetime.datetime(1990, 1, 1)
 	end = datetime.date.today()
-	df = web.DataReader(stock_name, "yahoo", start, end)
+	#df = web.DataReader(stock_name, "yahoo", start, end)
+	cwd = os.getcwd()
+	file_name = cwd + '\\' + dataframeFolderName + '\\' + stock_name
+	df = pd.read_pickle(file_name)
 	df.drop(['Close'], 1, inplace=True)
 
 	if normalize:        
@@ -76,15 +105,15 @@ def build_model2(layers, neurons, d):
 	return model
 
 def model_score(model, X_train, y_train, X_test, y_test):
-#其實這裡只需要傳入X_test和y_test即可，只是為了和上面格式保持一致因而也將X_train和y_train傳入了    
+#其實這裡只需要傳入X_test和y_test即可，只是為了和上面格式保持一致因而也將X_train和y_train傳入了
 	y_hat = model.predict(X_test)
-	y_t=y_test.reshape(-1,1)
+	y_t = y_test.reshape(-1,1)
 
 	temp = pd.DataFrame(y_hat)  
-	temp['yhat']=y_hat
-	temp['y']=y_t
+	temp['yhat'] = y_hat
+	temp['y'] = y_t
 	temp_rmse = sqrt(mean_squared_error(temp.y,temp.yhat))
-	temp_mse=mean_squared_error(temp.y,temp.yhat)
+	temp_mse = mean_squared_error(temp.y,temp.yhat)
 	print('TEMP RMSE: %.3f' % temp_rmse)
 	print('TEMP MSE: %.3f' % temp_mse)
 	return y_hat
@@ -92,7 +121,10 @@ def model_score(model, X_train, y_train, X_test, y_test):
 def denormalize(stock_name, normalized_value):
 	start = datetime.datetime(1990, 1, 1)
 	end = datetime.date.today()
-	df = web.DataReader(stock_name, "yahoo", start, end)
+	#df = web.DataReader(stock_name, "yahoo", start, end)
+	cwd = os.getcwd()
+	file_name = cwd + '\\' + dataframeFolderName + '\\' + stock_name
+	df = pd.read_pickle(file_name)
 
 	df = df['Adj Close'].values.reshape(-1,1)
 	normalized_value = normalized_value.reshape(-1,1)
@@ -116,8 +148,8 @@ def plot_result(stock_name, normalized_value_p, normalized_value_y_test):
 	#plt.show()
 
 	cwd = os.getcwd()
-	cwd = cwd + '\\lstm_train_diagram'
-	plt.savefig(cwd + '\\' + stock_name + '_LSTM_prediction_diagram.png')
+	cwd = cwd + '\\' + diagramFolderName
+	plt.savefig(cwd + '\\' + stock_name + diagramPictureName + '.png')
 	plt.close('all') # 关闭图 0
 	return newp, newy_test
 
@@ -125,11 +157,11 @@ def plot_result(stock_name, normalized_value_p, normalized_value_y_test):
 def calc_deviation(stock_name, lst_real, lst_predict, method):
 	count = 0
 	for index in range(len(lst_real)):
-		deviation = round(float((lst_predict[index]-lst_real[index])/lst_predict[index]),2)
+		deviation = round(float((lst_predict[index] - lst_real[index]) / lst_predict[index]),2)
 		deviation = abs(deviation)
 		count = count + deviation
 
-	rate = round((count/len(lst_real)),2)
+	rate = round((count / len(lst_real)),2)
 
 	stockPredictResultList = []
 	stockPredictResult = {}
@@ -139,11 +171,17 @@ def calc_deviation(stock_name, lst_real, lst_predict, method):
 	stockPredictResultList.append(stockPredictResult)
 	InsertStockPredictResult(stockPredictResultList)
 
-stockList = list(GetStockList())
+#stockList = list(GetStockList())
+goodStockList = list(GetGoodPredictStock(0.03))
+stockList = []
+for idx in range(len(goodStockList)):
+	stockList.append(goodStockList[idx].get('StockNo'))
+
 for i in range(len(stockList)):
-	stock_name = stockList[i+3].get('No') + '.TW'
+	stock_name = stockList[i]
+	print(stock_name)
 	try:		
-		seq_len = 22
+		seq_len = 60
 		d = 0.2
 		shape = [5, seq_len, 1] # feature, window, output
 		neurons = [128, 128, 32, 1]
@@ -155,24 +193,26 @@ for i in range(len(stockList)):
 
 		model = build_model2(shape, neurons, d)
 
-		history=model.fit(
-			X_train,
+		early_stopping = EarlyStopping(monitor='loss', patience=40, verbose=1)
+
+		history = model.fit(X_train,
 			y_train,
 			batch_size=512,
 			epochs=epochs,
 			validation_split=0.1,
-			verbose=1)
+			verbose=1,
+			callbacks=[early_stopping])
 
 		y_p = model_score(model, X_train, y_train, X_test, y_test)
 
 		denorm_pred, denorm_real = plot_result(stock_name, y_p, y_test)
 
-		calc_deviation(stock_name, list(denorm_pred), list(denorm_real), '5_features_lstm_predict')
+		calc_deviation(stock_name, list(denorm_pred), list(denorm_real), correctRateType)
 
 		#model = load_model('test.h5')
 
 		cwd = os.getcwd()
-		cwd = cwd + '\\lstm_train_model'
-		model.save(cwd + '\\' + stock_name + '_LSTM_prediction.h5')
+		cwd = cwd + '\\' + modelFolderName
+		model.save(cwd + '\\' + stock_name + modelFileName + '.h5')
 	except:
 		print(stock_name)

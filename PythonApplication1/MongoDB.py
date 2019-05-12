@@ -47,3 +47,7 @@ def GetStockInfoList(stockNo):
 def GetStockList():
 	collection = db[stockListCollection]
 	return collection.find({})
+
+def GetGoodPredictStock(threshold):
+	collection = db[stockPredictResultCollection]
+	return collection.find({"CorrectRate": {"$lt": threshold}}).sort("CorrectRate")
