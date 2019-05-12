@@ -39,11 +39,11 @@ from MongoDB import *
 from keras.callbacks import EarlyStopping
 
 dataframeFolderName = 'dataframe'
-diagramFolderName = 'lstm_train_diagram_season'
-diagramPictureName = '_LSTM_prediction_season_diagram'
-modelFolderName = 'lstm_train_model_season'
-modelFileName = '_LSTM_prediction_season'
-correctRateType = '5_features_lstm_predict_season'
+diagramFolderName = 'lstm_train_diagram_week'
+diagramPictureName = '_LSTM_prediction_week_diagram'
+modelFolderName = 'lstm_train_model_week'
+modelFileName = '_LSTM_prediction_week'
+correctRateType = '5_features_lstm_predict_week'
 
 def get_stock_data(stock_name, normalize=True):
 	start = datetime.datetime(1990, 1, 1)
@@ -181,7 +181,7 @@ for i in range(len(stockList)):
 	stock_name = stockList[i]
 	print(stock_name)
 	try:		
-		seq_len = 60
+		seq_len = 5
 		d = 0.2
 		shape = [5, seq_len, 1] # feature, window, output
 		neurons = [128, 128, 32, 1]
