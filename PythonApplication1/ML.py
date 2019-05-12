@@ -39,11 +39,11 @@ from MongoDB import *
 from keras.callbacks import EarlyStopping
 
 dataframeFolderName = 'dataframe'
-diagramFolderName = 'lstm_train_diagram_week'
-diagramPictureName = '_LSTM_prediction_week_diagram'
-modelFolderName = 'lstm_train_model_week'
-modelFileName = '_LSTM_prediction_week'
-correctRateType = '5_features_lstm_predict_week'
+diagramFolderName = 'lstm_train_diagram_100'
+diagramPictureName = '_LSTM_prediction_diagram'
+modelFolderName = 'lstm_train_model_100'
+modelFileName = '_LSTM_prediction'
+correctRateType = '5_features_lstm_predict_100'
 
 def get_stock_data(stock_name, normalize=True):
 	start = datetime.datetime(1990, 1, 1)
@@ -172,16 +172,168 @@ def calc_deviation(stock_name, lst_real, lst_predict, method):
 	InsertStockPredictResult(stockPredictResultList)
 
 #stockList = list(GetStockList())
-goodStockList = list(GetGoodPredictStock(0.03))
-stockList = []
-for idx in range(len(goodStockList)):
-	stockList.append(goodStockList[idx].get('StockNo'))
+goodStockList = list(GetGoodPredictStock(1.00))
+stockList = [1101,
+1102,
+1216,
+1301,
+1303,
+1326,
+1402,
+1476,
+2002,
+2105,
+2207,
+2301,
+2303,
+2308,
+2317,
+2324,
+2330,
+2354,
+2357,
+2382,
+2395,
+2408,
+2409,
+2412,
+2474,
+2801,
+2880,
+2881,
+2882,
+2883,
+2884,
+2885,
+2886,
+2311,
+2325,
+2887,
+2890,
+2891,
+2892,
+2912,
+3008,
+3045,
+3474,
+3481,
+4904,
+4938,
+5880,
+6505,
+9904,
+1227,
+1262,
+1319,
+1440,
+1477,
+1504,
+1536,
+1589,
+1590,
+1605,
+1704,
+1707,
+1717,
+1722,
+1723,
+1789,
+1802,
+2015,
+2049,
+2059,
+2101,
+2103,
+2106,
+2201,
+2204,
+2206,
+2231,
+2313,
+2327,
+2345,
+2347,
+2352,
+2353,
+2355,
+2356,
+2360,
+2362,
+2376,
+2377,
+2379,
+2383,
+2385,
+2392,
+2448,
+2449,
+2451,
+2498,
+2501,
+2542,
+2603,
+2609,
+2610,
+2615,
+2618,
+2707,
+2809,
+2812,
+2823,
+2834,
+2845,
+2849,
+2867,
+2888,
+2903,
+2915,
+3034,
+3037,
+3044,
+3189,
+3231,
+3673,
+3682,
+3702,
+4958,
+5264,
+5522,
+5871,
+6176,
+6239,
+6269,
+6285,
+6414,
+6415,
+6452,
+6456,
+8150,
+8454,
+8464,
+9907,
+9910,
+9914,
+9917,
+9921,
+9933,
+9938,
+9945]
+
+
 
 for i in range(len(stockList)):
-	stock_name = stockList[i]
-	print(stock_name)
+	stock_name = str(stockList[i]) + '.TW'
+
+	try:
+		obj = next(item for item in goodStockList if ((item["StockNo"] == stock_name) and (item["Type"] == "5_features_lstm_predict_100")))
+		print("Pass " + str(stock_name))
+		continue
+	except:
+		print("Do " + str(stock_name))	
+
+	#print(stock_name)
 	try:		
-		seq_len = 5
+		seq_len = 22
 		d = 0.2
 		shape = [5, seq_len, 1] # feature, window, output
 		neurons = [128, 128, 32, 1]
