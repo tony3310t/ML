@@ -10,6 +10,7 @@ import os
 from MongoDB import *
 from sklearn import preprocessing
 from keras.models import load_model
+import csv
 
 dataframeFolderName = 'dataframe'
 diagramFolderName = 'lstm_train_diagram_100'
@@ -17,6 +18,7 @@ diagramPictureName = '_LSTM_prediction_diagram'
 modelFolderName = 'selected_model'
 modelFileName = '_LSTM_prediction'
 correctRateType = '5_features_lstm_predict_100'
+outputFolderName = 'output'
 
 def get_stock_data(stock_name, normalize=True):
 	start = datetime.datetime(1990, 1, 1)
@@ -137,7 +139,7 @@ def calc_deviation(stock_name, lst_real, lst_predict, method):
 	stockPredictResultList.append(stockPredictResult)
 	InsertStockPredictResult(stockPredictResultList)
 
-def cal(lst_real, lst_predict, df):
+def cal(lst_real, lst_predict, df, stock_name):
 	keepFlag = 0
 	totalBuyMoney = 0
 	totalSellMoney = 0	
@@ -145,49 +147,65 @@ def cal(lst_real, lst_predict, df):
 	tmpCloseValue = 0
 	count = 0
 
-	for idx in range(len(lst_real) -2):
-		msg = ''
-		if keepFlag == 1:
-			closeValue = round(float(lst_real[idx][0]),2)			
+	cwd = os.getcwd()
+	cwd = cwd + '\\' + outputFolderName + '\\'
 
-			if closeValue > tmpCloseValue:
-				tmpCloseValue = closeValue
-				stopValue = round(closeValue*0.9,2)
+	with open(cwd + stock_name + '_' + 'output.csv', 'w', newline='') as csvfile:
+		writer = csv.writer(csvfile)
+		writer.writerow(['日期','動作','花費','收入','預期漲跌點數','實際漲跌點數','總花費','總收入'])
+		for idx in range(len(lst_real) -2):
+			msg = ''
+			if keepFlag == 1:
+				closeValue = round(float(lst_real[idx][0]),2)			
 
-		#print(str(df.iloc[[4273+idx+1]].index[0]))
-		msg = msg + str(df.iloc[[4273+idx+1]].index[0]) + ','
-		if(keepFlag == 0 and (lst_predict[idx+1][0] - lst_real[idx][0]) >= 0):
-			keepFlag = 1
-			buyMoney = round(lst_real[idx+1][0],2)*1000
-			totalBuyMoney = totalBuyMoney + buyMoney
-			msg = msg + '買進,' + '花費:' + str(buyMoney) + ',' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
-			#print('買進,' + '花費:' + str(buyMoney) + ',' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney))
-		elif( idx == len(lst_real) -3 or (keepFlag == 1 and lst_predict[idx+1][0] < stopValue)):
-			count = count + 1
-			tmpCloseValue = 0
-			keepFlag = 0
-			sellMoney = round(lst_real[idx+1][0],2)*1000
-			totalSellMoney = totalSellMoney + sellMoney
-			msg = msg + '賣出,' + '花費:0,' + '收入:' + str(sellMoney) + ',' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
+				if closeValue > tmpCloseValue:
+					tmpCloseValue = closeValue
+					stopValue = round(closeValue*0.9,2)
+
+			#print(str(df.iloc[[4273+idx+1]].index[0]))
+			date = str(df.iloc[[4273+idx+1]].index[0])
+			msg = msg + str(df.iloc[[4273+idx+1]].index[0]) + ','
+			expect = round((lst_predict[idx+1][0] - lst_real[idx][0]),2)
+			real = round((lst_real[idx+1][0] - lst_real[idx][0]),2)
+			if(keepFlag == 0 and (lst_predict[idx+1][0] - lst_real[idx][0]) >= 0):
+				keepFlag = 1
+				buyMoney = round(lst_real[idx+1][0],2)*1000
+				totalBuyMoney = totalBuyMoney + buyMoney
+				writer.writerow([date,'買進',str(buyMoney),'0',str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				#msg = msg + '買進,' + '花費:' + str(buyMoney) + ',' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
+				#print('買進,' + '花費:' + str(buyMoney) + ',' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney))
+			elif( idx == len(lst_real) -3 or (keepFlag == 1 and lst_predict[idx+1][0] < stopValue)):
+				count = count + 1
+				tmpCloseValue = 0
+				keepFlag = 0
+				sellMoney = round(lst_real[idx+1][0],2)*1000
+				totalSellMoney = totalSellMoney + sellMoney
+				writer.writerow([date,'賣出','0',str(sellMoney),str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				#msg = msg + '賣出,' + '花費:0,' + '收入:' + str(sellMoney) + ',' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
 			
-		elif keepFlag == 1:
-			msg = msg + '持有,' + '花費:0,' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
+			elif keepFlag == 1:
+				writer.writerow([date,'持有','0','0',str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				#msg = msg + '持有,' + '花費:0,' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
 			
-		else:
-			msg = msg + '無動作,' + '花費:0,' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
+			else:
+				writer.writerow([date,'無動作','0','0',str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				#msg = msg + '無動作,' + '花費:0,' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
 		
-		if(idx == len(lst_real) -3):
-			print(msg)
-			print(count)
-			print()
+			if(idx == len(lst_real) -3):
+				print(msg)
+				print(count)
+				print()
+	finalOutputFilePath = cwd + 'document.csv'
+	with open(finalOutputFilePath,'a') as fd:
+		writer = csv.writer(fd)
+		writer.writerow([stock_name, str(totalBuyMoney), str(totalSellMoney), str(totalSellMoney-totalBuyMoney), str(round(((totalSellMoney-totalBuyMoney)/totalBuyMoney),2)), str(count)])
 
 #stockList = list(GetStockList())
 
-stockList = [1103,1104,1108,1109,1201,1210,1217,1227,1235,1236,1307,1314,1321,1324,1416,1423,1434,1468,1473]
-
+stockList = list(GetGoodPredictStock(0.02))
 
 for i in range(len(stockList)):
-	stock_name = str(stockList[i]) + '.TW'
+	stock_name = str(stockList[i].get('StockNo'))
 	print(stock_name)
 
 	seq_len = 22
@@ -205,7 +223,7 @@ for i in range(len(stockList)):
 
 		denorm_pred, denorm_real = plot_result(stock_name, y_p, y_test)
 
-		cal(denorm_real, denorm_pred, df)
+		cal(denorm_real, denorm_pred, df, stock_name)
 		#calc_deviation(stock_name, list(denorm_pred), list(denorm_real), correctRateType)
 
 		
@@ -214,4 +232,4 @@ for i in range(len(stockList)):
 		#cwd = cwd + '\\' + modelFolderName
 		#model.save(cwd + '\\' + stock_name + modelFileName + '.h5')
 	except:
-		print(stock_name)
+		print('error:' + stock_name)
