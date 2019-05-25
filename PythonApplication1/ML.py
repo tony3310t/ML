@@ -172,13 +172,22 @@ def calc_deviation(stock_name, lst_real, lst_predict, method):
 	InsertStockPredictResult(stockPredictResultList)
 
 #stockList = list(GetStockList())
-goodStockList = list(GetGoodPredictStock(0.03))
+goodStockList = list(GetGoodPredictStock(0.02))
 stockList = []
 for idx in range(len(goodStockList)):
 	stockList.append(goodStockList[idx].get('StockNo'))
 
 for i in range(len(stockList)):
 	stock_name = stockList[i]
+
+	try:
+		obj = next(item for item in goodStockList if ((item["StockNo"] == stock_name) and (item["Type"] == "5_features_lstm_predict_season")))
+		print("Pass " + str(stock_name))
+		continue
+	except:
+		print("Do " + str(stock_name))    
+
+
 	print(stock_name)
 	try:		
 		seq_len = 60
