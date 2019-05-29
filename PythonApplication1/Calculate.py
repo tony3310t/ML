@@ -19,6 +19,7 @@ modelFolderName = 'selected_model'
 modelFileName = '_LSTM_prediction'
 correctRateType = '5_features_lstm_predict_100'
 outputFolderName = 'output'
+outputEveryUpDownFolderName = 'outputEveryUpDown'
 
 def get_stock_data(stock_name, normalize=True):
 	start = datetime.datetime(1990, 1, 1)
@@ -200,6 +201,48 @@ def cal(lst_real, lst_predict, df, stock_name):
 		writer = csv.writer(fd)
 		writer.writerow([stock_name, str(totalBuyMoney), str(totalSellMoney), str(totalSellMoney-totalBuyMoney), str(round(((totalSellMoney-totalBuyMoney)/totalBuyMoney),2)), str(count)])
 
+def calEveryUpDown(lst_real, lst_predict, df, stock_name):
+	keepFlag = 0
+	totalBuyMoney = 0
+	totalSellMoney = 0	
+	stopValue = 0
+	tmpCloseValue = 0
+	count = 0
+
+	cwd = os.getcwd()
+	cwd = cwd + '\\' + outputEveryUpDownFolderName + '\\'
+
+	with open(cwd + stock_name + '_' + 'output.csv', 'w', newline='') as csvfile:
+		writer = csv.writer(csvfile)
+		writer.writerow(['日期','動作','花費','收入','預期漲跌點數','實際漲跌點數','總花費','總收入'])
+		for idx in range(len(lst_real) -2):
+			msg = ''
+			
+			date = str(df.iloc[[4273+idx+1]].index[0])
+			msg = msg + str(df.iloc[[4273+idx+1]].index[0]) + ','
+			expect = round((lst_predict[idx+1][0] - lst_real[idx][0]),2)
+			real = round((lst_real[idx+1][0] - lst_real[idx][0]),2)
+			if(keepFlag == 0 and expect > 0):
+				keepFlag = 1
+				buyMoney = round(lst_real[idx+1][0],2)*1000
+				totalBuyMoney = totalBuyMoney + buyMoney
+				writer.writerow([date,'買進',str(buyMoney),'0',str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				
+			elif(keepFlag == 1 and (idx == len(lst_real) -3 or expect < 0)):
+				count = count + 1
+				keepFlag = 0
+				sellMoney = round(lst_real[idx+1][0],2)*1000
+				totalSellMoney = totalSellMoney + sellMoney
+				writer.writerow([date,'賣出','0',str(sellMoney),str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				
+			if(idx == len(lst_real) -3):
+				print(count)
+
+	finalOutputFilePath = cwd + 'document.csv'
+	with open(finalOutputFilePath,'a') as fd:
+		writer = csv.writer(fd)
+		writer.writerow([stock_name, str(totalBuyMoney), str(totalSellMoney), str(totalSellMoney-totalBuyMoney), str(round(((totalSellMoney-totalBuyMoney)/totalBuyMoney),2)), str(count)])
+
 #stockList = list(GetStockList())
 
 stockList = list(GetGoodPredictStock(0.02))
@@ -223,7 +266,7 @@ for i in range(len(stockList)):
 
 		denorm_pred, denorm_real = plot_result(stock_name, y_p, y_test)
 
-		cal(denorm_real, denorm_pred, df, stock_name)
+		calEveryUpDown(denorm_real, denorm_pred, df, stock_name)
 		#calc_deviation(stock_name, list(denorm_pred), list(denorm_real), correctRateType)
 
 		
@@ -231,5 +274,5 @@ for i in range(len(stockList)):
 		#cwd = os.getcwd()
 		#cwd = cwd + '\\' + modelFolderName
 		#model.save(cwd + '\\' + stock_name + modelFileName + '.h5')
-	except:
-		print('error:' + stock_name)
+	except Exception as e:
+		print('error:' + stock_name + ' msg: ' + e)
