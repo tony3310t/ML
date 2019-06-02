@@ -140,6 +140,54 @@ def calc_deviation(stock_name, lst_real, lst_predict, method):
 	stockPredictResultList.append(stockPredictResult)
 	InsertStockPredictResult(stockPredictResultList)
 
+def calDeviation(lst_real, lst_predict):
+	totalDays = len(lst_real)-1
+	totalNonExceptionDays = totalDays
+	upDownCorrectCount = 0
+	upDownRateCount = 0
+	upDownDiffList = []
+	
+	for idx in range(totalDays):
+		try:
+			predToday = round(float(lst_predict[idx][0]),3)
+			predTomorrow = round(float(lst_predict[idx+1][0]),3)
+			realToday = round(float(lst_real[idx][0]),3)
+			realTomorrow = round(float(lst_real[idx+1][0]),3)
+
+			upDown = False
+			predDiff = predTomorrow - realToday
+			realDiff = realTomorrow - realToday
+			if predDiff >=0 and realDiff >=0:
+				upDownCorrectCount = upDownCorrectCount+1
+			elif predDiff <0 and realDiff <0:
+				upDownCorrectCount = upDownCorrectCount+1
+
+			upDownRate = abs((realTomorrow-realToday)/realToday)
+			upDownRateCount = upDownRateCount + upDownRate
+
+			predUpDownDiff = abs(round(((predTomorrow-predToday)/predToday),3))
+			realUpDownDiff = abs(round(((realTomorrow-realToday)/realToday),3))
+			upDownDiff = abs(round(((predUpDownDiff-realUpDownDiff)/realUpDownDiff),3))
+			upDownDiffList.append(upDownDiff)
+		except:
+			totalNonExceptionDays = totalNonExceptionDays-1
+
+	avg = 0
+	avgCount = 0
+	for idx in range(len(upDownDiffList)):
+		avgCount = avgCount+upDownDiffList[idx]
+	avg = round((avgCount/len(upDownDiffList)),3)
+
+	SDCount = 0
+	for idx in range(len(upDownDiffList)):
+		SDCount = SDCount + round((upDownDiffList[idx]-avg)*(upDownDiffList[idx]-avg),3)
+
+	SD = round(math.sqrt(SDCount/len(upDownDiffList)),3)
+	upDownRate = round((upDownRateCount/totalNonExceptionDays),3)
+	upDownCorrectRate = round((upDownCorrectCount/totalNonExceptionDays),3)
+
+	return SD, upDownRate, upDownCorrectRate
+
 def cal(lst_real, lst_predict, df, stock_name):
 	keepFlag = 0
 	totalBuyMoney = 0
@@ -238,10 +286,11 @@ def calEveryUpDown(lst_real, lst_predict, df, stock_name):
 			if(idx == len(lst_real) -3):
 				print(count)
 
+	SD, upDownRate, upDownCorrectRate  = calDeviation(lst_real, lst_predict)
 	finalOutputFilePath = cwd + 'document.csv'
 	with open(finalOutputFilePath,'a') as fd:
 		writer = csv.writer(fd)
-		writer.writerow([stock_name, str(totalBuyMoney), str(totalSellMoney), str(totalSellMoney-totalBuyMoney), str(round(((totalSellMoney-totalBuyMoney)/totalBuyMoney),2)), str(count)])
+		writer.writerow([stock_name, str(totalBuyMoney), str(totalSellMoney), str(totalSellMoney-totalBuyMoney), str(round(((totalSellMoney-totalBuyMoney)/totalBuyMoney),2)), str(count), SD, upDownRate, upDownCorrectRate])
 
 #stockList = list(GetStockList())
 
