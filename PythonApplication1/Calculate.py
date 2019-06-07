@@ -1,3 +1,81 @@
+'''
+import os
+import csv
+import math
+
+cwd = os.getcwd()
+file_name = cwd + '\\' + 'outputUp' + '\\documentUp.csv'
+
+upList = []
+with open(file_name) as f:
+	rows = csv.DictReader(f)
+
+	# 以迴圈輸出指定欄位
+	for row in rows:
+		upList.append(row)
+
+file_name = cwd + '\\' + 'outputDown' + '\\documentDown.csv'
+
+downList = []
+with open(file_name) as f:
+	rows = csv.DictReader(f)
+
+	# 以迴圈輸出指定欄位
+	for row in rows:
+		downList.append(row)
+
+file_name = cwd + '\\' + 'outputEveryUpDown' + '\\documentE.csv'
+
+eList = []
+with open(file_name) as f:
+	rows = csv.DictReader(f)
+
+	# 以迴圈輸出指定欄位
+	for row in rows:
+		eList.append(row)
+
+for idx in range(len(upList)):
+	stockName = upList[idx].get('stockName')
+	print(stockName)
+
+	upTotal = upList[idx].get('total')
+	upPercent = round(float(upList[idx].get('percent')) * 100,2)
+	upCount = upList[idx].get('count')
+
+	downTotal = 0
+	downPercent = 0
+	downCount = 0
+
+	downIdx = next((indexDown for (indexDown, d) in enumerate(downList) if d["stockName"] == stockName), None)
+	if downIdx != None:
+		downTotal = downList[downIdx].get('total')
+		downPercent = round(float(downList[downIdx].get('percent')) * 100,2)
+		downCount = downList[downIdx].get('count')
+
+	upAndDownTotal = float(upTotal) + float(downTotal)
+	upAndDownPercent = upPercent + downPercent
+	upAndDownCount = float(upCount) + float(downCount)
+
+	eTotal = 0
+	ePercent = 0
+	eCount = 0
+	predUpDownCorrectRate = 0
+
+	eIdx = next((indexE for (indexE, e) in enumerate(eList) if e["stockName"] == stockName), None)
+	if eIdx != None:
+		eTotal = eList[eIdx].get('total')
+		ePercent = round(float(eList[eIdx].get('percent')) * 100,2)
+		eCount = eList[eIdx].get('count')
+		predUpDownCorrectRate = float(eList[eIdx].get('predUpDownRate')) * 100
+
+	finalOutputFilePath = cwd + '\\' + 'outputResult' + '\\documentResult.csv'
+	with open(finalOutputFilePath,'a') as fd:
+		writer = csv.writer(fd)
+		writer.writerow([stockName,str(round(predUpDownCorrectRate,2)),str(upTotal),str(upPercent),str(upCount),str(downTotal),str(downPercent),str(downCount),str(upAndDownTotal),str(upAndDownPercent),str(upAndDownTotal),str(eTotal),str(ePercent),str(eCount)])
+
+print(upList)
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -18,7 +96,8 @@ diagramPictureName = '_LSTM_prediction_diagram'
 modelFolderName = 'selected_model'
 modelFileName = '_LSTM_prediction'
 correctRateType = '5_features_lstm_predict_100'
-outputFolderName = 'output'
+outputUpFolderName = 'outputUp'
+outputDownFolderName = 'outputDown'
 outputEveryUpDownFolderName = 'outputEveryUpDown'
 
 def get_stock_data(stock_name, normalize=True):
@@ -188,7 +267,7 @@ def calDeviation(lst_real, lst_predict):
 
 	return SD, upDownRate, upDownCorrectRate
 
-def cal(lst_real, lst_predict, df, stock_name):
+def calUp(lst_real, lst_predict, df, stock_name):
 	keepFlag = 0
 	totalBuyMoney = 0
 	totalSellMoney = 0	
@@ -197,9 +276,9 @@ def cal(lst_real, lst_predict, df, stock_name):
 	count = 0
 
 	cwd = os.getcwd()
-	cwd = cwd + '\\' + outputFolderName + '\\'
+	cwd = cwd + '\\' + outputUpFolderName + '\\'
 
-	with open(cwd + stock_name + '_' + 'output.csv', 'w', newline='') as csvfile:
+	with open(cwd + stock_name + '_' + 'outputUp.csv', 'w', newline='') as csvfile:
 		writer = csv.writer(csvfile)
 		writer.writerow(['日期','動作','花費','收入','預期漲跌點數','實際漲跌點數','總花費','總收入'])
 		for idx in range(len(lst_real) -2):
@@ -223,7 +302,7 @@ def cal(lst_real, lst_predict, df, stock_name):
 				writer.writerow([date,'買進',str(buyMoney),'0',str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
 				#msg = msg + '買進,' + '花費:' + str(buyMoney) + ',' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
 				#print('買進,' + '花費:' + str(buyMoney) + ',' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney))
-			elif( idx == len(lst_real) -3 or (keepFlag == 1 and lst_predict[idx+1][0] < stopValue)):
+			elif( keepFlag == 1 and (idx == len(lst_real) -3 or lst_predict[idx+1][0] < stopValue)):
 				count = count + 1
 				tmpCloseValue = 0
 				keepFlag = 0
@@ -244,7 +323,68 @@ def cal(lst_real, lst_predict, df, stock_name):
 				print(msg)
 				print(count)
 				print()
-	finalOutputFilePath = cwd + 'document.csv'
+	finalOutputFilePath = cwd + 'documentUp.csv'
+	with open(finalOutputFilePath,'a') as fd:
+		writer = csv.writer(fd)
+		writer.writerow([stock_name, str(totalBuyMoney), str(totalSellMoney), str(totalSellMoney-totalBuyMoney), str(round(((totalSellMoney-totalBuyMoney)/totalBuyMoney),2)), str(count)])
+
+def calDown(lst_real, lst_predict, df, stock_name):
+	keepFlag = 0
+	totalBuyMoney = 0
+	totalSellMoney = 0	
+	stopValue = 0
+	tmpCloseValue = 9999
+	count = 0
+
+	cwd = os.getcwd()
+	cwd = cwd + '\\' + outputDownFolderName + '\\'
+
+	with open(cwd + stock_name + '_' + 'outputDown.csv', 'w', newline='') as csvfile:
+		writer = csv.writer(csvfile)
+		writer.writerow(['日期','動作','花費','收入','預期漲跌點數','實際漲跌點數','總花費','總收入'])
+		for idx in range(len(lst_real) -2):
+			msg = ''
+			if keepFlag == 1:
+				closeValue = round(float(lst_real[idx][0]),2)			
+
+				if closeValue < tmpCloseValue:
+					tmpCloseValue = closeValue
+					stopValue = round(closeValue*1.1,2)
+
+			#print(str(df.iloc[[4273+idx+1]].index[0]))
+			date = str(df.iloc[[4273+idx+1]].index[0])
+			msg = msg + str(df.iloc[[4273+idx+1]].index[0]) + ','
+			expect = round((lst_predict[idx+1][0] - lst_real[idx][0]),2)
+			real = round((lst_real[idx+1][0] - lst_real[idx][0]),2)
+			if(keepFlag == 0 and expect < 0):
+				keepFlag = 1
+				buyMoney = round(lst_real[idx+1][0],2)*1000
+				totalBuyMoney = totalBuyMoney + buyMoney
+				writer.writerow([date,'買進',str(buyMoney),'0',str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				#msg = msg + '買進,' + '花費:' + str(buyMoney) + ',' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
+				#print('買進,' + '花費:' + str(buyMoney) + ',' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney))
+			elif(keepFlag == 1 and (idx == len(lst_real) -3 or lst_predict[idx+1][0] > stopValue)):
+				count = count + 1
+				tmpCloseValue = 9999
+				keepFlag = 0
+				sellMoney = round(lst_real[idx+1][0],2)*1000
+				totalSellMoney = totalSellMoney + sellMoney
+				writer.writerow([date,'賣出','0',str(sellMoney),str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				#msg = msg + '賣出,' + '花費:0,' + '收入:' + str(sellMoney) + ',' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
+			
+			elif keepFlag == 1:
+				writer.writerow([date,'持有','0','0',str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				#msg = msg + '持有,' + '花費:0,' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
+			
+			else:
+				writer.writerow([date,'無動作','0','0',str(expect),str(real),str(totalBuyMoney),str(totalSellMoney)])
+				#msg = msg + '無動作,' + '花費:0,' + '收入:0,' + '總花費:' + str(totalBuyMoney) + ',' + '總收入:' + str(totalSellMoney)
+		
+			if(idx == len(lst_real) -3):
+				print(msg)
+				print(count)
+
+	finalOutputFilePath = cwd + 'documentDown.csv'
 	with open(finalOutputFilePath,'a') as fd:
 		writer = csv.writer(fd)
 		writer.writerow([stock_name, str(totalBuyMoney), str(totalSellMoney), str(totalSellMoney-totalBuyMoney), str(round(((totalSellMoney-totalBuyMoney)/totalBuyMoney),2)), str(count)])
@@ -294,10 +434,15 @@ def calEveryUpDown(lst_real, lst_predict, df, stock_name):
 
 #stockList = list(GetStockList())
 
-stockList = list(GetGoodPredictStock(0.02))
+#stockList = list(GetGoodPredictStock(0.02))
+stockList = ['2885.TW','2890.TW','2903.TW','3702.TW','5880.TW','9904.TW','9907.TW']
 
 for i in range(len(stockList)):
-	stock_name = str(stockList[i].get('StockNo'))
+	#stock_name = str(stockList[i].get('StockNo'))
+	stock_name = stockList[i]
+	if stock_name == '1315.TW'	or stock_name == '2880.TW'	or stock_name == '1103.TW'	or stock_name == '1104.TW'	or stock_name == '1108.TW'	or stock_name == '1109.TW'	or stock_name == '1110.TW'	or stock_name == '1201.TW'	or stock_name == '1203.TW'	or stock_name == '1210.TW'	or stock_name == '1213.TW'	or stock_name == '1217.TW'	or stock_name == '1227.TW'	or stock_name == '1233.TW'	or stock_name == '1235.TW'	or stock_name == '1236.TW'	or stock_name == '1303.TW'	or stock_name == '1307.TW'	or stock_name == '1314.TW':
+		continue
+
 	print(stock_name)
 
 	seq_len = 22
@@ -315,7 +460,9 @@ for i in range(len(stockList)):
 
 		denorm_pred, denorm_real = plot_result(stock_name, y_p, y_test)
 
-		calEveryUpDown(denorm_real, denorm_pred, df, stock_name)
+		calUp(denorm_real, denorm_pred, df, stock_name)
+		calDown(denorm_real, denorm_pred, df, stock_name)
+		#calEveryUpDown(denorm_real, denorm_pred, df, stock_name)
 		#calc_deviation(stock_name, list(denorm_pred), list(denorm_real), correctRateType)
 
 		
